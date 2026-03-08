@@ -180,8 +180,12 @@ export default function Home() {
                   
                   {/* Find Similar Button positioned under the title */}
                   <button 
-                    onClick={() => handleFindSimilar(book)}
-                    className="mt-3 text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-full w-fit border border-indigo-500/20"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleFindSimilar(book);
+                    }}
+                    className="mt-3 text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-full w-fit border border-indigo-500/20 relative z-10"
                   >
                     <Search className="w-3 h-3" /> Find Similar
                   </button>
