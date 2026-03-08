@@ -12,6 +12,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('queue'); // queue, reading, done
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Recommendation State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recLoading, setRecLoading] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -82,6 +88,40 @@ export default function Home() {
     await supabase.auth.signOut();
   }
 
+  async function handleFindSimilar(book) {
+    setSelectedBook(book);
+    setIsModalOpen(true);
+    setRecLoading(true);
+    setRecommendations([]);
+
+    try {
+      const res = await fetch(`/api/recommend?title=${encodeURIComponent(book.title)}&author=${encodeURIComponent(book.author || '')}`);
+      const data = await res.json();
+      setRecommendations(data.recommendations || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRecLoading(false);
+    }
+  }
+
+  async function queueRecommendation(rec) {
+    const { error } = await supabase.from('books').insert({
+      title: rec.title,
+      author: rec.author,
+      isbn13: rec.isbn13,
+      user_id: session.user.id,
+      status: 'queue'
+    });
+    
+    if (!error) {
+      alert(`Added "${rec.title}" to your Queue!`);
+      fetchBooks(session.user.id);
+    } else {
+      alert('Failed to add book.');
+    }
+  }
+
   if (!session) return null; // Prevent flash before redirect
 
   return (
@@ -137,6 +177,14 @@ export default function Home() {
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white truncate pr-2">{book.title}</h3>
                   <p className="text-slate-400 text-sm mt-1">{book.author}</p>
+                  
+                  {/* Find Similar Button positioned under the title */}
+                  <button 
+                    onClick={() => handleFindSimilar(book)}
+                    className="mt-3 text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-full w-fit border border-indigo-500/20"
+                  >
+                    <Search className="w-3 h-3" /> Find Similar
+                  </button>
                 </div>
                 
                 {/* Status Actions */}
@@ -200,6 +248,69 @@ export default function Home() {
           </button>
         </div>
       </nav>
+
+      {/* Recommendation Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+              <h2 className="text-lg font-bold text-white">Because you liked <span className="text-indigo-400">{selectedBook?.title}</span>...</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white p-1">
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto flex-1 space-y-4">
+              {recLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mb-4"></div>
+                  <p>Analyzing library & computing rubrics...</p>
+                </div>
+              ) : recommendations.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  No solid recommendations found.
+                </div>
+              ) : (
+                recommendations.map((rec, i) => (
+                  <div key={i} className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                    <div className="flex gap-4">
+                      {rec.imageUrl && (
+                        <div className="shrink-0">
+                          <img src={rec.imageUrl} alt={rec.title} className="w-16 h-24 object-cover rounded-md shadow-sm border border-slate-700" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-2">
+                          <h3 className="font-semibold text-white text-base leading-tight">{rec.title}</h3>
+                          <div className="shrink-0 bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-1 rounded-full border border-indigo-500/30">
+                            {rec.score}/8 PTS
+                          </div>
+                        </div>
+                        <p className="text-sm text-slate-400 mt-1">{rec.author}</p>
+                        
+                        <div className="mt-3 bg-slate-800/80 rounded-lg p-2.5 border border-slate-700/50">
+                          <p className="text-xs text-slate-300 italic leading-relaxed">
+                            "{rec.explanation}"
+                          </p>
+                        </div>
+                        
+                        <div className="mt-3 flex justify-end">
+                          <button 
+                            onClick={() => queueRecommendation(rec)}
+                            className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                          >
+                            <List className="w-3.5 h-3.5" /> Add to Queue
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Mobile Safe Area helper */}
       <style jsx global>{`
