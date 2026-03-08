@@ -2,7 +2,7 @@
   "version": 2,
   "crons": [
     {
-      "path": "/api/sync?user_id=YOUR_GR_ID&sys_uid=YOUR_SUPABASE_USER_ID",
+      "path": "/api/sync?user_id=5125594&sys_uid=YOUR_SUPABASE_USER_ID",
       "schedule": "0 * * * *"
     }
   ]
