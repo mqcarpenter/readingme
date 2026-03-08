@@ -279,13 +279,25 @@ export default function Home() {
                   <div key={i} className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
                     <div className="flex gap-4">
                       {rec.imageUrl && (
-                        <div className="shrink-0">
+                        <a 
+                          href={`https://www.goodreads.com/search?q=${encodeURIComponent(rec.title + ' ' + rec.author)}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="shrink-0 hover:opacity-80 transition-opacity"
+                        >
                           <img src={rec.imageUrl} alt={rec.title} className="w-16 h-24 object-cover rounded-md shadow-sm border border-slate-700" />
-                        </div>
+                        </a>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start gap-2">
-                          <h3 className="font-semibold text-white text-base leading-tight">{rec.title}</h3>
+                          <a 
+                            href={`https://www.goodreads.com/search?q=${encodeURIComponent(rec.title + ' ' + rec.author)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-semibold text-white text-base leading-tight hover:text-indigo-400 transition-colors"
+                          >
+                            {rec.title}
+                          </a>
                           <div className="shrink-0 bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2 py-1 rounded-full border border-indigo-500/30">
                             {rec.score}/8 PTS
                           </div>
