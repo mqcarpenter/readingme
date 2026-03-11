@@ -19,6 +19,12 @@ export default function Home() {
   const [recLoading, setRecLoading] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
 
+  // Add Book State
+  const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
+  const [newBookTitle, setNewBookTitle] = useState('');
+  const [newBookAuthor, setNewBookAuthor] = useState('');
+  const [addBookLoading, setAddBookLoading] = useState(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -137,9 +143,17 @@ export default function Home() {
           <BookOpen className="w-6 h-6" />
           <h1 className="text-xl font-bold tracking-tight text-white">ReadingMe</h1>
         </div>
-        <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-white transition-colors">
-          <LogOut className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsAddBookModalOpen(true)} 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+          >
+            <span className="text-lg leading-none">+</span> Add Book
+          </button>
+          <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-white transition-colors">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 pt-6">
@@ -179,16 +193,18 @@ export default function Home() {
                   <p className="text-slate-400 text-sm mt-1">{book.author}</p>
                   
                   {/* Find Similar Button positioned under the title */}
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleFindSimilar(book);
-                    }}
-                    className="mt-3 text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-full w-fit border border-indigo-500/20 relative z-10"
-                  >
-                    <Search className="w-3 h-3" /> Find Similar
-                  </button>
+                  {(book.user_rating >= 4 || book.average_rating >= 4.0) && (
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFindSimilar(book);
+                      }}
+                      className="mt-3 text-xs flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-full w-fit border border-indigo-500/20 relative z-10"
+                    >
+                      <Search className="w-3 h-3" /> Find Similar
+                    </button>
+                  )}
                 </div>
                 
                 {/* Status Actions */}
@@ -304,9 +320,22 @@ export default function Home() {
                         </div>
                         <p className="text-sm text-slate-400 mt-1">{rec.author}</p>
                         
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {rec.genre && rec.genre !== 'Unknown Genre' && (
+                            <span className="bg-slate-800 text-slate-300 text-xs px-2 py-1 rounded-md border border-slate-700">
+                              {rec.genre}
+                            </span>
+                          )}
+                          {rec.communityRating && (
+                            <span className="bg-yellow-500/10 text-yellow-500 text-xs px-2 py-1 rounded-md border border-yellow-500/20 flex items-center gap-1">
+                              ★ {rec.communityRating}
+                            </span>
+                          )}
+                        </div>
+
                         <div className="mt-3 bg-slate-800/80 rounded-lg p-2.5 border border-slate-700/50">
                           <p className="text-xs text-slate-300 italic leading-relaxed">
-                            "{rec.explanation}"
+                            "{rec.reason}"
                           </p>
                         </div>
                         
@@ -323,6 +352,72 @@ export default function Home() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Book Modal */}
+      {isAddBookModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><BookOpen className="w-5 h-5 text-indigo-400" /> Add New Book</h2>
+              <button onClick={() => setIsAddBookModalOpen(false)} className="text-slate-400 hover:text-white p-1">
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={newBookTitle}
+                  onChange={(e) => setNewBookTitle(e.target.value)}
+                  placeholder="e.g. Project Hail Mary"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Author</label>
+                <input
+                  type="text"
+                  value={newBookAuthor}
+                  onChange={(e) => setNewBookAuthor(e.target.value)}
+                  placeholder="e.g. Andy Weir"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                />
+              </div>
+              
+              <div className="mt-2 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsAddBookModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!newBookTitle.trim() || addBookLoading}
+                  onClick={async () => {
+                    setAddBookLoading(true);
+                    await supabase.from('books').insert({
+                      title: newBookTitle,
+                      author: newBookAuthor,
+                      user_id: session.user.id,
+                      status: 'queue'
+                    });
+                    setNewBookTitle('');
+                    setNewBookAuthor('');
+                    setAddBookLoading(false);
+                    setIsAddBookModalOpen(false);
+                    fetchBooks(session.user.id);
+                  }}
+                  className="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addBookLoading ? 'Adding...' : 'Add to Queue'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -11,16 +11,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // We search Google Books for the same title/author to find related subjects
-    const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}+inauthor:${encodeURIComponent(author || '')}&langRestrict=en`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    
-    let subjects = [];
-    if (searchData.items && searchData.items.length > 0) {
-      subjects = searchData.items[0].volumeInfo.categories || [];
-    }
-    
     // If we have subjects, search for books in those subjects, else fallback to searching by author
     let query = '';
     if (subjects.length > 0) {
@@ -33,8 +23,15 @@ export default async function handler(req, res) {
     }
 
     const recUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=15&langRestrict=en`;
+    console.log('Fetching recommendations:', recUrl);
     const recRes = await fetch(recUrl);
     const recData = await recRes.json();
+    
+    console.log(`Initial search items: ${searchData.items?.length}, Rec items: ${recData.items?.length}`);
+
+    if (recData.error) {
+      console.error('Google Books API Error:', recData.error);
+    }
 
     if (!recData.items) {
       return res.status(200).json({ recommendations: [] });
@@ -92,8 +89,11 @@ export default async function handler(req, res) {
         reasons.push("is generally related to your search");
       }
 
-      // Construct brief explanation
-      const explanation = `Score: ${score}/8. Recommended because it ${reasons.join(', and ')}.`;
+      // Extract Genre
+      const genre = (info.categories && info.categories.length > 0) ? info.categories[0] : 'Unknown Genre';
+      
+      // Construct brief explanation as reason
+      const reason = `Recommended because it ${reasons.join(', and ')}.`;
       
       // Determine Image
       const imageUrl = info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : 'https://s.gr-assets.com/assets/nophoto/book/111x148-bcc042a9c91a29c1d680899eff700a03.png';
@@ -111,7 +111,9 @@ export default async function handler(req, res) {
         imageUrl,
         isbn13,
         score,
-        explanation
+        genre: genre,
+        communityRating: info.averageRating || null,
+        reason: reason
       });
     }
 

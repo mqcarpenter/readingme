@@ -52,10 +52,11 @@ class handler(BaseHTTPRequestHandler):
             synced_count = 0
             
             for entry in feed.entries:
-                # Extract book_id from the link or guid
-                # Example guid: Book:12345
-                guid = entry.get('id', '')
-                goodreads_id = guid.split(':')[-1] if ':' in guid else guid
+                # Extract book_id directly if possible, else fallback to guid
+                goodreads_id = entry.get('book_id')
+                if not goodreads_id:
+                    guid = entry.get('id', '')
+                    goodreads_id = guid.split(':')[-1] if ':' in guid else guid
                 
                 title = entry.get('title', 'Unknown Title')
                 author = entry.get('author_name', 'Unknown Author')
@@ -83,6 +84,17 @@ class handler(BaseHTTPRequestHandler):
                     except Exception as ge:
                         print(f"Google API error for {title}: {ge}")
 
+                # Safely parse ratings, defaulting to None if missing or invalid
+                try:
+                    user_rating = int(entry.get('user_rating', 0))
+                except (ValueError, TypeError):
+                    user_rating = None
+                
+                try:
+                    average_rating = float(entry.get('average_rating', 0.0))
+                except (ValueError, TypeError):
+                    average_rating = None
+
                 # Upsert into Supabase
                 data = {
                     "goodreads_id": goodreads_id,
@@ -90,6 +102,8 @@ class handler(BaseHTTPRequestHandler):
                     "author": author,
                     "isbn13": isbn if isbn else None,
                     "status": "queue",
+                    "user_rating": user_rating,
+                    "average_rating": average_rating,
                     "user_id": sys_user_id
                 }
                 
